@@ -1,0 +1,6 @@
+{
+  "name": "IWS Moodle Dashboard",
+  "description": "Student learning dashboard for IWS Online School",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

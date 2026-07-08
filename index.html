@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/webp" href="/IWS_Logo_fav.webp" />
+    <title>IWS Online School Dashboard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Chat Widget Bütünleşik Kod (HTML + CSS + JS) -->
+    <style>
+      #custom-chat-widget {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 99999;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        pointer-events: none;
+        display: flex; /* Masaüstünde flex olacak */
+        flex-direction: column;
+        align-items: flex-end;
+      }
+      
+      /* SADECE MASAÜSTÜNDE GÖRÜNMESİ İÇİN (768px'den küçük ekranlarda gizlenir) */
+      @media (max-width: 768px) {
+        #custom-chat-widget {
+          display: none !important;
+        }
+      }
+
+      #custom-chat-widget * {
+        box-sizing: border-box;
+      }
+      .cw-pointer-auto { pointer-events: auto; }
+      
+      /* Sohbet Penceresi */
+      #cw-window {
+        width: 340px;
+        height: 500px;
+        max-height: 80vh;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        margin-bottom: 16px;
+        border: 1px solid #f3f4f6;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+      }
+      #cw-window.cw-open {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+      /* Üst Header */
+      .cw-header {
+        background: #2563eb;
+        color: white;
+        padding: 16px 16px 24px 16px;
+        text-align: center;
+        border-radius: 0 0 16px 16px;
+        position: relative;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        z-index: 10;
+      }
+      .cw-close-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: #1d4ed8;
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      }
+      .cw-close-btn:hover {
+        background: #1e40af;
+      }
+      .cw-avatar-container {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 12px auto;
+        border-radius: 50%;
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: visible;
+      }
+      .cw-avatar-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+      }
+      
+      /* Orta Mesajlar Alanı */
+      .cw-body {
+        flex: 1;
+        background: #f9fafb;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .cw-msg {
+        display: flex;
+        flex-direction: column;
+        max-width: 85%;
+        animation: cw-fade-in 0.3s ease;
+      }
+      .cw-msg-bot {
+        align-items: flex-start;
+        align-self: flex-start;
+      }
+      .cw-msg-user {
+        align-items: flex-end;
+        align-self: flex-end;
+      }
+      .cw-msg-bubble {
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      .cw-msg-bot .cw-msg-bubble {
+        background: white;
+        color: #374151;
+        border: 1px solid #f3f4f6;
+        border-bottom-left-radius: 4px;
+      }
+      .cw-msg-user .cw-msg-bubble {
+        background: #2563eb;
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+      .cw-bot-name {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-bottom: 4px;
+        margin-left: 4px;
+      }
+      
+      /* WhatsApp Yönlendirme Kutusu */
+      .cw-wa-wrapper {
+        max-width: 90%;
+        background: white;
+        border: 1px solid #f3f4f6;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        font-size: 14px;
+        color: #374151;
+        align-self: flex-start;
+        animation: cw-fade-in 0.3s ease;
+      }
+      .cw-wa-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #25D366;
+        color: white;
+        padding: 12px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 500;
+        margin-top: 12px;
+        transition: background 0.2s;
+      }
+      .cw-wa-btn:hover {
+        background: #20bd5a;
+      }
+      
+      /* Alt Mesaj Yazma Alanı */
+      .cw-footer {
+        padding: 12px;
+        background: white;
+        border-top: 1px solid #f3f4f6;
+      }
+      .cw-form {
+        display: flex;
+        position: relative;
+      }
+      .cw-input {
+        width: 100%;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 9999px;
+        padding: 12px 48px 12px 16px;
+        font-size: 14px;
+        outline: none;
+        transition: border 0.2s;
+      }
+      .cw-input:focus {
+        border-color: #60a5fa;
+      }
+      .cw-send-btn {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: #2563eb;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cw-send-btn:disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+      
+      /* Yuvarlak Maskot (Chat Kapalıyken) */
+      #cw-mascot-btn {
+        width: 96px;
+        height: 96px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+        outline: none;
+      }
+      #cw-mascot-btn:hover {
+        transform: scale(1.05);
+      }
+      #cw-mascot-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+      }
+      
+      /* Heyet Tipi Selamlama Balonu (Diyalog) */
+      #cw-greeting {
+        position: absolute;
+        bottom: 80px;
+        right: 80px;
+        background: white;
+        padding: 12px 20px;
+        border-radius: 16px;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 1px solid #f3f4f6;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform-origin: bottom right;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+      #cw-greeting.cw-show {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+
+      @keyframes cw-fade-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+
+    <div id="custom-chat-widget">
+      
+      <!-- Sohbet Penceresi (Açık Hal) -->
+      <div id="cw-window" class="cw-pointer-auto">
+        <div class="cw-header">
+          <button class="cw-close-btn" id="cw-close-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+          <div class="cw-avatar-container">
+            <!-- Pencere İçi Avatar GIF'i -->
+            <img src="https://cdn.prod.website-files.com/67a062706416a9e83c7b5444/69fd17bbd1dd497ea6618deb_chatlive_pp.gif" alt="Captain Alby">
+          </div>
+          <!-- BURASI GÜNCELLENDİ: color: #ffffff !important eklendi -->
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #ffffff !important;">Talk with our team! 👋</h3>
+          <div style="display: flex; align-items: center; justify-content: center; font-size: 12px; color: #bfdbfe; margin-top: 4px;">
+            <span style="width: 8px; height: 8px; background: #4ade80; border-radius: 50%; margin-right: 6px;"></span>
+            Team replies under 1 hour
+          </div>
+        </div>
+        
+        <div class="cw-body" id="cw-body">
+          <div style="text-align: center; font-size: 12px; color: #9ca3af; margin: 8px 0;" id="cw-time"></div>
+          
+          <!-- İlk Mesaj -->
+          <div class="cw-msg cw-msg-bot">
+             <div class="cw-bot-name">Captain Alby</div>
+             <div class="cw-msg-bubble">Hello! 👋 I'm your assistant Captain Alby. How can I help you today?</div>
+          </div>
+        </div>
+        
+        <div class="cw-footer">
+          <form class="cw-form" id="cw-form">
+            <input type="text" class="cw-input" id="cw-input" placeholder="Compose your message..." autocomplete="off">
+            <button type="submit" class="cw-send-btn" id="cw-send-btn" disabled>
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Kapalı Hal ve Balon -->
+      <div style="position: relative;" class="cw-pointer-auto">
+        <div id="cw-greeting">Hey! 👋</div>
+        <button id="cw-mascot-btn">
+          <!-- Chat Kapalıyken Görünen Şeffaf Maskot -->
+          <img src="https://cdn.prod.website-files.com/67a062706416a9e83c7b5444/69fd17bb3a98ca05fad03264_chatlive.gif" alt="Support Mascot">
+        </button>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        // 1) Rastgele Selamlamalarımız 
+        const Greetings = [
+          "Hey! 👋",
+          "How can I help you today?",
+          "Need any assistance?",
+          "Hi there! Let's chat."
+        ];
+        
+        let isOpen = false;
+        let greetingIndex = 0;
+        let userMessageCount = 0;
+        let greetingInterval;
+        
+        // 2) DOM Elementlerini Yakalama
+        const windowEl = document.getElementById('cw-window');
+        const mascotBtn = document.getElementById('cw-mascot-btn');
+        const closeBtn = document.getElementById('cw-close-btn');
+        const greetingEl = document.getElementById('cw-greeting');
+        const formEl = document.getElementById('cw-form');
+        const inputEl = document.getElementById('cw-input');
+        const sendBtn = document.getElementById('cw-send-btn');
+        const bodyEl = document.getElementById('cw-body');
+        const timeEl = document.getElementById('cw-time');
+        
+        // 3) Anlık Saati Ayarlama
+        const now = new Date();
+        timeEl.innerText = `Today, ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        
+        // 4) Pencereyi Açma/Kapatma Mantığı
+        function toggleChat() {
+          isOpen = !isOpen;
+          if (isOpen) {
+            windowEl.classList.add('cw-open');
+            greetingEl.style.display = 'none';
+            mascotBtn.style.display = 'none';
+            bodyEl.scrollTop = bodyEl.scrollHeight;
+          } else {
+            windowEl.classList.remove('cw-open');
+            setTimeout(() => {
+              mascotBtn.style.display = 'flex';
+              greetingEl.style.display = 'block';
+              startGreetingCycle();
+            }, 200);
+          }
+        }
+        
+        // 5) Selamlama Balonu Döngüsü
+        function startGreetingCycle() {
+          clearInterval(greetingInterval);
+          greetingEl.classList.add('cw-show');
+          greetingInterval = setInterval(() => {
+            if (isOpen) return clearInterval(greetingInterval);
+            
+            greetingEl.classList.remove('cw-show');
+            setTimeout(() => {
+              greetingIndex = (greetingIndex + 1) % Greetings.length;
+              greetingEl.innerText = Greetings[greetingIndex];
+              greetingEl.classList.add('cw-show');
+            }, 500); 
+          }, 5000); 
+        }
+        
+        // 6) Mesaj Ekleme Fonksiyonları
+        function appendUserMessage(text) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'cw-msg cw-msg-user';
+          wrapper.innerHTML = `<div class="cw-msg-bubble">${text}</div>`;
+          bodyEl.appendChild(wrapper);
+          bodyEl.scrollTop = bodyEl.scrollHeight;
+        }
+        
+        function appendWAWrapper() {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'cw-wa-wrapper';
+          wrapper.innerHTML = `
+            <p style="margin: 0 0 12px 0;">For faster and more personalized support, feel free to continue this conversation on WhatsApp! 🚀</p>
+            <a href="https://wa.me/447440423094" target="_blank" rel="noopener noreferrer" class="cw-wa-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 20px; height: 20px; margin-right: 8px;">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+              </svg>
+              Continue on WhatsApp
+            </a>
+          `;
+          bodyEl.appendChild(wrapper);
+          bodyEl.scrollTop = bodyEl.scrollHeight;
+        }
+        
+        function appendBotMessage(text) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'cw-msg cw-msg-bot';
+          wrapper.innerHTML = `
+            <div class="cw-bot-name">Captain Alby</div>
+            <div class="cw-msg-bubble">${text}</div>
+          `;
+          bodyEl.appendChild(wrapper);
+          bodyEl.scrollTop = bodyEl.scrollHeight;
+        }
+        
+        function generateBotReply(text) {
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes('price') || lowerText.includes('cost')) {
+            return "You can find all our pricing details on the Pricing page. Would you like me to connect you with our sales team for a custom quote?";
+          }
+          if (lowerText.includes('help') || lowerText.includes('support')) {
+            return "I'm here to help! Please describe your issue in a bit more detail, or check our Helpdesk.";
+          }
+          return "Thanks for reaching out! Someone will be with you shortly.";
+        }
+        
+        // 7) Gönder Formu Event Listener
+        formEl.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const text = inputEl.value.trim();
+          if (!text) return;
+          
+          inputEl.value = '';
+          sendBtn.disabled = true;
+          appendUserMessage(text);
+          userMessageCount++;
+          
+          setTimeout(() => {
+            if (userMessageCount === 1) { 
+              appendWAWrapper();
+            } else {
+              appendBotMessage(generateBotReply(text));
+            }
+          }, 700);
+        });
+        
+        inputEl.addEventListener('input', (e) => {
+          sendBtn.disabled = !e.target.value.trim();
+        });
+        
+        // 8) Tıklama Dinleyicileri
+        mascotBtn.addEventListener('click', toggleChat);
+        greetingEl.addEventListener('click', toggleChat);
+        closeBtn.addEventListener('click', toggleChat);
+        
+        setTimeout(() => {
+          startGreetingCycle();
+        }, 1000);
+        
+      })();
+    </script>
+  </body>
+</html>
+
